@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Voucher Entri Kas Keluar</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-gray-100 p-10">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        function App() {
+            const [rows, setRows] = React.useState([
+                { akun: 'Kas', debit: 0, kredit: 0 },
+                { akun: 'Beban', debit: 0, kredit: 0 }
+            ]);
+            const [auditLog, setAuditLog] = React.useState([]);
+            const [nomorReferensi, setNomorReferensi] = React.useState('JV-' + Date.now());
+
+            const totalDebit = rows.reduce((a, b) => a + Number(b.debit || 0), 0);
+            const totalKredit = rows.reduce((a, b) => a + Number(b.kredit || 0), 0);
+            const isBalanced = totalDebit === totalKredit && totalDebit > 0;
+
+            const handleChange = (index, field, value) => {
+                const newRows = [...rows];
+                newRows[index][field] = value;
+                setRows(newRows);
+            };
+
+            // Fungsi hash SHA-256 sederhana (untuk demo)
+            const generateHash = async (data) => {
+                const msgBuffer = new TextEncoder().encode(data);
+                const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+                const hashArray = Array.from(new Uint8Array(hashBuffer));
+                return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            };
+
+            // Handler tombol Submit
+            const handleSubmit = async () => {
+                const createdBy = 'user-' + Math.floor(Math.random() * 1000);
+                const createdAt = new Date().toISOString();
+                const payload = `${nomorReferensi}|${createdAt}|${totalDebit}|${totalKredit}`;
+                const hashChecksum = await generateHash(payload);
+
+                const logEntry = {
+                    nomor_referensi: nomorReferensi,
+                    total_debit: totalDebit,
+                    total_kredit: totalKredit,
+                    status_posting: 'POSTED',
+                    created_by: createdBy,
+                    created_at: createdAt,
+                    hash_checksum: hashChecksum.substring(0, 16) + '...',
+                    rows: [...rows]
+                };
+
+                setAuditLog([logEntry, ...auditLog]);
+                alert('Transaksi POSTED berhasil disubmit!\nLihat panel Audit Log di bawah.');
+            };
+
+            return (
+                <div class="max-w-4xl mx-auto">
+                    <div class="bg-white p-6 rounded shadow-md mb-6">
+                        <h2 class="text-xl font-bold mb-4">Voucher Entri Kas Keluar</h2>
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium mb-1">Nomor Referensi</label>
+                            <input
+                                class="border p-2 w-full"
+                                value={nomorReferensi}
+                                onChange={(e) => setNomorReferensi(e.target.value)}
+                            />
+                        </div>
+
+                        <table class="w-full mb-4">
+                            <thead>
+                                <tr class="bg-gray-200">
+                                    <th class="p-2">Akun</th>
+                                    <th class="p-2">Debit</th>
+                                    <th class="p-2">Kredit</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {rows.map((row, i) => (
+                                    <tr key={i}>
+                                        <td class="p-2"><input class="border p-1 w-full" value={row.akun} onChange={(e) => handleChange(i, 'akun', e.target.value)} /></td>
+                                        <td class="p-2"><input type="number" class="border p-1 w-full" value={row.debit} onChange={(e) => handleChange(i, 'debit', e.target.value)} /></td>
+                                        <td class="p-2"><input type="number" class="border p-1 w-full" value={row.kredit} onChange={(e) => handleChange(i, 'kredit', e.target.value)} /></td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                            <tfoot>
+                                <tr class="font-bold">
+                                    <td class="p-2 text-right">Total:</td>
+                                    <td class="p-2">{totalDebit}</td>
+                                    <td class="p-2">{totalKredit}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+
+                        <div class={`p-3 mb-4 rounded ${isBalanced ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                            Status: {isBalanced ? 'BALANCED (Siap Submit)' : 'NOT BALANCED'}
+                        </div>
+
+                        <button
+                            onClick={handleSubmit}
+                            disabled={!isBalanced}
+                            class={`px-4 py-2 rounded text-white ${isBalanced ? 'bg-blue-600 hover:bg-blue-700 cursor-pointer' : 'bg-gray-400 cursor-not-allowed'}`}
+                        >
+                            Submit Transaksi
+                        </button>
+                    </div>
+
+                    {/* Panel Audit Log */}
+                    <div class="bg-white p-6 rounded shadow-md">
+                        <h3 class="text-lg font-bold mb-4">📋 Audit Log (Jejak Audit)</h3>
+                        {auditLog.length === 0 ? (
+                            <p class="text-gray-500 italic">Belum ada transaksi yang disubmit.</p>
+                        ) : (
+                            <div class="space-y-3">
+                                {auditLog.map((log, i) => (
+                                    <div key={i} class="border-l-4 border-blue-500 pl-3 py-2 bg-gray-50">
+                                        <p class="font-mono text-xs text-gray-700">
+                                            <strong>[POSTED]</strong> {log.nomor_referensi} |
+                                            Debit: {log.total_debit} | Kredit: {log.total_kredit}
+                                        </p>
+                                        <p class="text-xs text-gray-500">
+                                            by {log.created_by} at {log.created_at}
+                                        </p>
+                                        <p class="text-xs text-gray-400 font-mono">
+                                            hash: {log.hash_checksum}
+                                        </p>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+</html>
