@@ -23,8 +23,6 @@
 | Universitas | Universitas Diponegoro (UNDIP) |
 | Fakultas / Departemen | FEB / Akuntansi |
 | Semester | Gasal 2026/2027 |
-| Repositori GitHub | [ISI LINK GITHUB KAMU] |
-| Google Drive (backup, opsional) | [ISI LINK DRIVE KAMU, OPSIONAL] |
 
 ---
 
